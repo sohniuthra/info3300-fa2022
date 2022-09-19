@@ -1,146 +1,198 @@
-<html><head>
-<title>INFO 3300 - September 12</title>
+<html>
+
+<head>
+  <title>INFO 3300 - September 12</title>
 
   <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
-  
+
   <link rel="stylesheet" type="text/css" href="../css/normalize.css">
   <link rel="stylesheet" type="text/css" href="../css/skeleton.css">
   <link rel="stylesheet" type="text/css" href="../css/custom-style.css">
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css">
   <link rel="stylesheet" href="../css/hljs-base16.css">
   <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
-  
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  
-  <style>
-  
-  .gridlines line {
-    stroke: #bbb;
-  }
-  
-  .gridlines .domain {
-    stroke: none;
-  }
 
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    .gridlines line {
+      stroke: #bbb;
+    }
+
+    .gridlines .domain {
+      stroke: none;
+    }
   </style>
 
 </head>
+
 <body>
   <div class="container larger">
-  <h3>Notes for September 12</h3>
-  <p>
-    Our dataset is sourced from Gapminder. We'll do a spinoff on one of <a href="https://youtu.be/jbkSRLYSojo">Hans Rosling's famous data presentations</a>.
-  </p>
-  <p>
-    The <a href="https://github.com/d3/d3-fetch/tree/v2.0.0">d3.csv command</a> makes use of the <a href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API">Fetch API</a>. To learn more about why we use ".then", check out the documentation on <a href="https://developers.google.com/web/fundamentals/primers/promises">JS Promises</a>.
-  </p>
+    <h3>Notes for September 12</h3>
+    <p>
+      Our dataset is sourced from Gapminder. We'll do a spinoff on one of <a href="https://youtu.be/jbkSRLYSojo">Hans
+        Rosling's famous data presentations</a>.
+    </p>
+    <p>
+      The <a href="https://github.com/d3/d3-fetch/tree/v2.0.0">d3.csv command</a> makes use of the <a
+        href="https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API">Fetch API</a>. To learn more about why we use
+      ".then", check out the documentation on <a
+        href="https://developers.google.com/web/fundamentals/primers/promises">JS Promises</a>.
+    </p>
 
-  <h5>HTML for today:</h5>
-
-
-
-  <svg id="scatterplot" height="400" width="400" style="margin-top:50px" >
-
-  </svg>
+    <h5>HTML for today:</h5>
 
 
 
-  <!-- This block will be automatically filled with syntax-highlighted code from the script below -->
-  <h5>Code for today:</h5>
-  <pre>
+    <svg id="scatterplot" height="400" width="400" style="margin-top:50px">
+
+    </svg>
+
+
+
+    <!-- This block will be automatically filled with syntax-highlighted code from the script below -->
+    <h5>Code for today:</h5>
+    <pre>
     <code id="display" class="hljs javascript">
     </code>
   </pre>
 
-  <!--- Code for today's class --->
-  <script id="notes">
-  
-    // --- 1
-    //  '../datasets/titanic.json'
-    console.log( '---Top of file---' );
-                  
-    
-    
+    <!--- Code for today's class --->
+    <script id="notes">
 
-    // --- 2
-    // Let's make a plain old scatterplot
-
-    // 0. Find our SVG and get that ready
-    //     We're going to use a new way of padding that makes axes easier
-    // const svg = d3.select('svg#scatterplot');
-    // const width = svg.attr('width');
-    // const height = svg.attr('height');
-    
-    
-    
-    
-    // 1. Import some CSV data
-    //        .then( function(successfulResult), function(errorMessage) )
-    
-    
-            
-    // 2. Check for data issues
-    
-  
-
-    // 3. Let's build some scales
-    
-    
-    
-    
-    // 4. Start plotting circles and see what happens
-    
-    
-    
-    
-    
-    
-    // ---- 3
-    // 5. Let's add some axes
-    // We're going to use D3's axis tools to do it
-    
-    
-    
-    
-    // 5A. We can manually make some gridlines
-    //  It would work fine for HW4, but I don't recommend it once you start using axis labels
-    
-    
-    
-
-    // 5B. Or we can use axes in a clever way
-    
-    
-    
-    
-    
-    // Next up: filtering, legends, and advanced formatting
-    
-    
-
-  
+      // --- 1
+      //  '../datasets/titanic.json'
+      console.log('---Top of file---');
 
 
-  </script>
+      //promise notes
 
-  
+      // --- 2
+      // Let's make a plain old scatterplot
 
-  <!--- calls the highlight library to fill the <pre> tag with code --->
-  <script>
-  
-  function sanitize(s) {
-    return s.replace("<br>", "\\n")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-          }
-    document.getElementById("display").innerHTML = sanitize( document.getElementById("notes").innerText);
-    hljs.highlightAll();
-  </script>
+      // 0. Find our SVG and get that ready
+      //     We're going to use a new way of padding that makes axes easier
+      const svg = d3.select('svg#scatterplot');
+      const width = svg.attr('width');
+      const height = svg.attr('height');
 
+      //dictionary for padding/margins (pixels that space your points in)
+      const margins = { top: 10, right: 10, bottom: 50, left: 50 };
+      const chartWidth = width - margins.left - margins.right;
+      const chartHeight = height - margins.top - margins.bottom;
+
+      let chartArea = svg.append("g")
+        // .attribute("transform", "translate("+margin.left+","+margin.top+")") 
+        .attr("transform", `translate(${margins.left}, ${margins.top})`)
+      //shifts so that (0,0) of the chart aligns with chart width and height (makes math easier)
+
+      // 1. Import some CSV data
+      //        .then( function(successfulResult), function(errorMessage) )
+      d3.csv('../datasets/gapminder.csv').then((data) => {
+
+        console.log(data);
+
+        // 2. Check for data issues
+        //the numbers are stirngs
+
+        data.forEach(d => {
+          d['life'] = Number(d['Life Expectancy']);
+          d['gdp'] = Number(d['GDP/Person (PPP$)']);
+          d['pop'] = Number(d['Total Population'].replace(/,/g, '')) //regex that removes commas
+        });
+
+        //function returns true if you should keep the element and false if you filter it out
+        data = data.filter((d) => { return d['gdp'] != 0 && d['life'] != 0 && d['pop'] != 0 })
+
+        // 3. Let's build some scales
+
+        //finds min and max at the same time
+        //look at the gdp number for each point
+        //returns a 2 element array
+        const gdpExtent = d3.extent(data, d => d['gdp']);
+        const gdpScale = d3.scaleLinear().domain(gdpExtent).range([0, chartWidth]);
+
+        const lifeExtent = d3.extent(data, d => d['life']);
+        const lifeScale = d3.scaleLinear().domain(lifeExtent).range([chartHeight, 0]);
+
+        const popExtent = d3.extent(data, d => d['pop']);
+        const popScale = d3.scaleLinear().domain(popExtent).range([5, 10]);
+
+        // 4. Start plotting circles and see what happens
+
+        data.forEach((d, i) => {
+
+          console.log(d, i);
+
+          chartArea.append("circle")
+            .attr("cx", gdpScale(d['gdp']))
+            .attr("cy", lifeScale(d['life']))
+            .attr("r", popScale(d['pop']))
+            .attr("opacity", 0.8)
+            .attr("index", i)
+            .style("fill", "steelblue");
+        })
+
+
+        // ---- 3
+        // 5. Let's add some axes
+        // We're going to use D3's axis tools to do it
+
+        //creating axis labels for y axis (other directions work too)
+        let leftAxis = d3.axisLeft(lifeScale)
+
+        //paste axis labels
+        let gTag = svg.append('g')
+          .attr("class", "y axis")
+          .attr("transform", `translate(${margins.left - 10}, ${margins.top})`)
+
+        leftAxis(gTag);
+
+        let bottomAxis = d3.axisBottom(gdpScale).ticks(6);
+
+        svg.append('g')
+          .attr("class", "x axis")
+          .attr("transform", `translate(${margins.left - 10}, ${margins.top + chartHeight + 10})`)
+          .call(bottomAxis)
+
+        // 5A. We can manually make some gridlines
+        //  It would work fine for HW4, but I don't recommend it once you start using axis labels
+
+        // 5B. Or we can use axes in a clever way
+
+        // INCLUDING THIS AS A HINT FOR THE HW, WILL BE DISCUSSED ON FRIDAY (CHECK CSS AT TOP)
+        //tickFormat with the empty quotes clears the text
+        let leftGridlines = d3.axisLeft(lifeScale).tickSize(-chartWidth - 10).tickFormat("");
+        svg.append('g')
+          .attr('class', 'y gridlines')
+          .attr('transform', `translate(${margins.left - 10},${margins.top})`)
+          .call(leftGridlines);
+
+
+        // Next up: filtering, legends, and advanced formatting
+
+
+      });
+  //everything that you are doing with the data has to be in the .then
+
+    </script>
+
+    <!--- calls the highlight library to fill the <pre> tag with code --->
+    <script>
+
+      function sanitize(s) {
+        return s.replace("<br>", "\\n")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+      document.getElementById("display").innerHTML = sanitize(document.getElementById("notes").innerText);
+      hljs.highlightAll();
+    </script>
 
   </div>
 </body>
+
 </html>
