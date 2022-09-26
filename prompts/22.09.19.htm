@@ -254,15 +254,14 @@
 
 
           //everything in the join has been assigned a data value from data
-          chartArea.selectAll("circle").data(data)
+          let circles = chartArea.selectAll("circle").data(data)
             .join("circle")
             .attr("cx", d => yearScale(d['year']))
             .attr("cy", d => grossScale(d['worldwide_gross'] + 1))
             .attr("r", d => imdbScale(d['imdb_rating']))
             .attr("opacity", 0.8)
             .attr("label", d => d["title"])
-            .style("fill", d => genreScale(d['Main_Genre']))
-
+            .style("fill", d => genreScale(d['Main_Genre']));
 
           // CONVERT TO USE A DATA JOIN
           // data.forEach((d, i) => {
@@ -277,7 +276,38 @@
           // });
           // done with forEach
 
+          circles.on("mouseover", function () {
+
+            //this (js keyword) returns the svg that triggered the event
+            //using function is the only way to get access to "this"
+            //style has preference over attr
+
+            d3.select(this)
+              .transition()
+              .duration(200)
+              .style("stroke", "black")
+              .style("stroke-width", 4)
+              .style("fill", d => lighten(genreScale(d['Main_Genre'])));
+
+            let title = d3.select(this).datum()['title'];
+            d3.select("#label").text(title);
+
+          });
+
+          circles.on("mouseout", function () {
+            d3.select(this)
+              .attr("stroke", "none")
+              .attr("stroke-width", 0)
+              .style("fill", d => genreScale(d['Main_Genre']));
+
+            d3.select("#label").text("");
+
+          });
+
         });
+
+      //can change all circles at once
+      // circles.style("fill", "black");
 
     </script>
 
