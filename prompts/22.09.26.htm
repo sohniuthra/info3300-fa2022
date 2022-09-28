@@ -144,7 +144,9 @@
             bottomAxis.scale(genreScale);
             bottomAxisG.call(bottomAxis);
 
-            chartArea.selectAll('rect.bar').data(data)
+            //always use the identifier in the data join (the anonymous function)
+            //this means that if a data point was assigned a specific genre, it will stay that genre
+            chartArea.selectAll('rect.bar').data(data, d => d['genre'])
               .join('rect')
               .attr('class', 'bar')
               .attr("fill", "steelblue")
