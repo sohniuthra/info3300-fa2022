@@ -25,6 +25,12 @@
       stroke: black;
       stroke-width: 1px;
     }
+
+    .graticule {
+      fill: none;
+      stroke: grey;
+      stroke-width: 1px;
+    }
   </style>
 
 </head>
@@ -106,7 +112,7 @@
         //   "../datasets/us-smaller.json"
 
         var us = await d3.json("../datasets/us-smaller.json")
-        let states = topojson.feature(us, us.objects.states);
+        var states = topojson.feature(us, us.objects.states);
         //mesh is an outline
         let statesMesh = topojson.mesh(us, us.objects.states);
 
@@ -115,7 +121,7 @@
         const path = d3.geoPath().projection(projection);
 
         // 2b. Pick out topographic features and build d3 helpers
-        map.selectAll("path.state").data(states.features)
+        let states = map.selectAll("path.state").data(states.features)
           .join("path")
           .attr("class", "state")
           .attr("note", d => d.id)
@@ -127,12 +133,11 @@
 
         // 2c. Draw states and outlines
 
-
-
         // 2d. Add a graticule (we did this after 2c, but it must go here)
         //      (Graticules are much more configurable, but we'll use the default for now)
 
-
+        let graticule = d3.geoGraticule10();
+        map.append("path").attr("class", "graticule").attr("d", path(graticule));
 
 
 
@@ -140,21 +145,31 @@
         // 3a. Import survey data as synchronous calls
         // "../datasets/us-state-names.tsv"
         // "../datasets/state-survey-responses-22.csv"
+        const surveyData = await d3.csv("../datasets/state-survey-responses-22.csv", d3.autoType);
 
 
 
         // 3b. Generate the counts we will need
-
-
+        let stateIdCounts = {} //stateID => count #
+        let stateIdNames = {} //stateID => name of state
+        surveyData.forEach(row => {
+          stateIdCounts[row.state_code] = Number(row.total);
+          stateIdNames[row.state_code] = row.state_name;
+        });
 
 
         // 3c. Make a d3 color scale for frequency    
+        const minMax = d3.extent(surveyData, d => Number(d.total));
+        // const colorScale = d3.scaleSequential(d3.interpolateBuPu).domain(minMax);
 
+        //breaks into chunks
+        // const colorScale = d3.scaleQuantize().domain(minMax).range(["rgb(160, 210, 232", "rgb(111, 116, 210", "rgb(37, 92, 214", "rgb(41, 19, 177"])
 
-
+        const colorScale = d3.scaleQuantile()
+          .domain(Object.values(stateIdCounts)).range()
 
         // 3d. Recolor the states to make a choropleth map
-
+        states.style("fill", d => colorScale(stateIdCounts[d.id]));
 
 
 
