@@ -159,6 +159,7 @@
           d3.select("g.x.gridlines").call(yGridlines)
 
           //hide stuff that's out of bounds
+          //defs stores things like visual effects
           plot.append("defs").append("clipPath")
             .attr("id", "chartClip")
             .append("rect").attr("x", 0)
@@ -166,7 +167,11 @@
             .attr("width", chartWidth)
             .attr("height", chartHeight);
 
-          chartArea.attr("clip-path",)
+          //continuing here on 10/19
+          //clip path is used so the dots don't go outside of the chart
+          //pan zoom happens first and then stuff is shifted over using transform/translate
+          //make sure clip area is with respect to (0,0) even with margins because of transform/translate
+          chartArea.attr("clip-path", "url(#chartClip)");
         }
 
 
@@ -196,6 +201,7 @@
         let mapHeight = map.attr("height");
         let projection = d3.geoAlbers().fitSize([mapWidth, mapHeight], states);
         let path = d3.geoPath().projection(projection);
+        //first step for zooming
         let viewport = map.append("g");
 
         // Add paths for everything
@@ -230,7 +236,41 @@
 
         // 2. PAN AND ZOOM STARTS HERE
 
+        var zoom = d3.zoom()
+          //upperleft corner, upperright corner
+          .translateExtent([[-50, -50], [mapWidth + 50, mapHeight + 50]]) //constrain how far someone can move (don't want someone ending up in the ocean)
+          .scaleExtent([1, 20]) //constrain how much someone can zoom
+          .on("zoom", mapZoomed);
 
+        //creates zoom event handler
+        map.call(zoom)
+
+        viewport.select(".county-outline")
+          .attr("visibility", "hidden");
+
+        viewport.select(".county")
+          .attr("visibility", "hidden");
+
+        //take apart event paramter dictionary
+        function mapZoomed({ transform }) {
+
+          viewport.attr("transform", transform);
+
+          //scale the borders, shrink the same amount the zoom has grown
+          viewport.select(".state-outline").style("stroke-width", 2 / transform.k)
+          viewport.select(".county-outline").style("stroke-width", 2 / transform.k)
+
+          // if (transform.k > 5){
+          //   //show the counties
+          // }
+          // else { //hide the counties }
+          viewport.select(".county-outline")
+            .attr("visibility", (transform.k > 3) ? "visible" : "hidden");
+
+          viewport.selectAll(".county")
+            .attr("visibility", (transform.k > 3) ? "visible" : "hidden");
+
+        }
 
 
 
