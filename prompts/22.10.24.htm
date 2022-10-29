@@ -133,7 +133,7 @@
             .strength(0.05)
             .x(d => ageScale(d.age)))
           .force("collision", d3.forceCollide() //makes sure the nodes don't collide
-            .radius(2)
+            .radius(3) //simulation will think circles are bigger than they actually are
             .iterations(8)) //high value = more accurately detects collisions, any number above 4 will be slow
           .on("tick", updateAllPassengerPositions);
 
@@ -160,9 +160,20 @@
         });
         d3.select("#tick").on("click", () => {
           // Move the simulation one "tick"
+          passengerSimulation.tick();
+          updateAllPassengerPositions();
         });
         d3.select("#rand").on("click", () => {
           // Randomize positions and restart the simulation
+          passengerSimulation.restart();
+          passengerSimulation.stop();
+          //reheat the simulation
+          passengerSimulation.alpha(1);
+          passengers.forEach(d => {
+            d.x = d3.randomUniform(10, allWidth - 10)();
+            d.y = d3.randomUniform(10, allWidth - 10)();
+          });
+
         });
 
 
