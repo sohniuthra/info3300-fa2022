@@ -216,8 +216,92 @@
         });
       }
 
+<<<<<<< HEAD
       requestData();
 
+=======
+      render();  // Call render once to make sure we draw circles even if simulation stops
+
+      
+      // Handle drag events and add a nice text label
+      var label = layer.append("text").attr("id","label");
+
+      function dragstart(event, d) {
+        // Begin dragging a circle, make sure the simulation reserves enough alpha to react
+        // We use event.active here to make sure we handle multitouch
+        // This is also a boolean that can help to differentiate when you are using both a pan and a drag
+        if (!event.active) {
+          // alphaTarget here is the "minimum" alpha allowed in the model
+          // If it is greater than 0, then points are always allowed to move a bit
+          // During the drag we want it to be >0 so that the model can shift around
+          // Too low and it feels mushy. Too high and it feels jumpy or falls apart
+          label.text(d.id);
+          sim.alphaTarget(0.08).restart();
+        }
+
+        // We initially tried d.x=event.x; The problem here was that the model is changing d.x in real time.
+        // In the best case, it just means the drag and model fight, leading to points that vibrate
+        // In the worst case, you run into a race condition or other concurrency issue
+
+        // Putting values into d.fy and d.fx signal to d3 that you are FIXING the point in a location -- usually used for drags
+        // This disallows the simulation from changing x and y of this point
+        d.fx = event.x;
+        d.fy = event.y;
+
+        label.attr("x",event.x + 5).attr("y",event.y);
+
+      }
+      function dragging(event, d) {
+        // Continue dragging
+        d.fx = event.x;
+        d.fy = event.y;
+        label.attr("x",event.x + 5).attr("y",event.y);
+
+      }
+      function dragend(event, d) {
+        // End dragging a circle, make sure the simulation has enough alpha left to fix things afterwards
+        if (!event.active) {
+          sim.alphaTarget(0); // Allow the simulation to cool completely again
+          label.text("");
+        }
+
+        // Remember to null out your .fx and .fy so that d3 can begin simulating the dragged point once more
+        d.fx = null;
+        d.fy = null;
+
+      }
+
+
+
+
+
+
+
+
+
+      
+      // Handle the buttons provided in the HTML the same way as we did before
+      d3.select("#play").on("click", () => {
+        // Start animating the simulation
+        sim.alpha(1).restart(); // clears the "alpha" value and starts fresh
+      
+      });
+      d3.select("#stop").on("click", () => {
+        // Pause the simulation animation
+        sim.stop(); // pauses sim
+      
+      });
+      d3.select("#tick").on("click", () => {
+        // Move the simulation one "tick"
+        sim.tick(); // moves one frame forward, but doesn't trigger tick event
+        render(); // manually update circles
+      
+      });
+    }
+
+    requestData();
+    
+>>>>>>> 4a8315b7b461676437c68815eeb7a3dd1a214e13
     </script>
 
 
