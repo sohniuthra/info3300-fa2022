@@ -14,8 +14,6 @@
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="https://d3js.org/topojson.v3.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/validator@13.5.2/validator.min.js"></script>
-
 
   <style>
     .outline {
@@ -116,16 +114,15 @@
     <div>
       <h5>Code for today:</h5>
       <pre>
-      <code id="display1" class="hljs javascript">
-      </code>
-    </pre>
+    <code id="display1" class="hljs javascript">
+    </code>
+  </pre>
     </div>
 
     <!--- Code for today's class --->
     <script id="notes1">
 
       const requestData = async () => {
-
 
         // Data originally in GeoJSON form on the WPRDC (https://data.wprdc.org/dataset/neighborhoods1)
         //  Converted to topoJSON, which reduced file size from 1.3mB to 250kB.
@@ -143,91 +140,78 @@
 
         console.log(pgh);
 
+        const houses = await d3.json("/houses");
 
-        // Load in house data from our backend server -- apply no filter criteria so we get everything
-        // It is good practice to keep a "var" of these datasets around so that if new data come in during interactions they will be in an obvious place and you don't need to download them again
-        var houses = await d3.json("/houses");
+        console.log(houses)
 
-        // We wrap our circle-drawing code in a function because we know we're going to be updating circles as the user interacts with the interface
-        // This makes life easier and reduces redundant copies of code which lead to bugs
         function updateHouses(data) {
 
-          console.log("updateHouses", data);
-
-          // Project the lat, lng data to pixels
           data.forEach(d => {
             d.position = projection([d.Longitude, d.Latitude]);
           });
 
-          // Draw the circles using a data join
-          // If updateHouses is called again, .data().join() will automatically figure out what to add, remove, or change based on any changes the data experiences
           map.selectAll("circle.datapoint").data(data)
             .join("circle")
             .attr("class", "datapoint")
             .attr("r", 4)
             .attr("cx", d => d.position[0])
             .attr("cy", d => d.position[1])
-            // click to toggle star and and off
             .on("click", function (event, d) {
 
-              let circle = d3.select(this);
+              let circle = d3.select(this)
               if (circle.classed("starred")) {
-                // We send a json request to /unstar, which unstars the point on the server
-                // The server then sends back a list of currently starred points, so we use .then to trigger an update
-                d3.json(`/unstar?id=${d.HouseID}`).then(data => {
-                  starred = data;
-                  updateStarred(starred);
-                });
+                //unstar
+
+                d3.json(`/unstar?id=${d.HouseID}`).then(returnedData => {
+                  starred = returnedData;
+                  updateStarred(returnedData);
+
+                })
               }
               else {
-                d3.json(`/star?id=${d.HouseID}`).then(data => {
-                  starred = data;
-                  updateStarred(starred);
-                });
+                //star
+
+                d3.json(`/unstar?id=${d.HouseID}`).then(returnedData => {
+                  starred = returnedData;
+                  updateStarred(returnedData);
+
+                })
               }
-
-            });
-
+              //check if this has the class
+              //pick opposite option
+            })
         }
 
         updateHouses(houses);
 
+        var starred = await d3.json("/starred")
+        function updateStarred(data) { //an array of HouseID's we've starred
 
-        // On first load, grab anything that's already been starred from the server
-        var starred = await d3.json("/starred");
-
-        // Like updateHouses, we wrap this in a function in case we need to star things often
-        function updateStarred(data) {
-
-          console.log("updateStarred", data);
-
-          // Select all circles and assign the class "starred" if their HouseID is in the starred list
-          map.selectAll("circle")
-            .classed("starred", d => starred.includes(d.HouseID));
-          // .classed( <class>, <true or false> )  adds or removes a class based on the t/f value
+          map.selectAll("circle.datapoint")
+            //.classed(className, true or false) true adds the class and false removes
+            //.classed(className) returns true or false
+            .classed("starred", d => starredData.includes(d.HouseID))
 
         }
-
         updateStarred(starred);
 
 
-        // Let's add some static query tools to let the user filter their data
-        // These will take the form of text input fields and a button to apply the filter
+        //enable filtering
         let controls = d3.select("#controls");
 
-        // Sale price
-        let price = controls.append("div") // Container
-        price.append("p").text("Min Price:") // Label
-          .append("input")              // Input element
+        //sale price
+        let price = controls.append("div");
+        price.append("p").text("Min Price:");
+        price.append("input")
           .attr("type", "text")
           .attr("class", "price")
-          .attr("param", "priceMn");
-        // We use the "param" attribute to store where this value would go in the URL
-        price.append("p").text("Max Price:")
-          .append("input")
+          .attr("param", "priceMn")
+
+        price.append("p").text("Max Price:");
+        price.append("input")
           .attr("type", "text")
           .attr("class", "price")
-          .attr("param", "priceMx");
+          .attr("param", "priceMx")
 
         // Bedrooms
         let bed = controls.append("div")
@@ -255,44 +239,30 @@
           .attr("class", "bath")
           .attr("param", "bathMx");
 
-        // Placeholder for error message    
-        let error = controls.append("div")
-          .attr("id", "errormsg")
 
-
-        // Button to submit
-        // You could imagine doing this all on the client's side (and it would be more efficient)
-        // Here we send the request to the server so that we can see what's happening
-        // In cases where the server has vastly more data than can be transmitted, this pattern is more useful
         let button = controls.append("div")
           .append("button")
           .text("Update")
           .on("click", function () {
-            // To make a url based on our query, we'll use the builtin URL object
-            // This makes configuring URL parameters fairly easy
+
+            //127.0.0.1/houses?priceMn=453443
             let target = new URL("/houses", document.location);
-
-            // Loop through each text input element...
-            controls.selectAll("input").each(function () {
-
-              // Find out what its param is, and what the user has typed
+            controls.selectALl("input").each(function () {
               let key = d3.select(this).attr("param");
               let txt = d3.select(this).property("value");
 
               if (txt.length > 0) {
-                // If they've typed something, then send it over to the server as a param
                 target.searchParams.append(key, txt)
               }
-            });
 
-            // Finally, download a new dataset and update the view
-            d3.json(target).then(data => {
-              houses = data;           // This is why I often put the data in a var -- so it can be
-              //  referred to and overwritten from any context globally
-              updateHouses(data);
-              updateStarred(starred);
-            });
-          });
+              d3.json(target).then(data => {
+                houses = data;
+                updateHouses(data);
+                updateStarred(starred);
+              })
+            })
+          })
+
 
       };
 
