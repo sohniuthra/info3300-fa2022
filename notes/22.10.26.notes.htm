@@ -261,15 +261,11 @@
         });
       }
 
-<<<<<<< HEAD
-      requestData();
-
-=======
       render();  // Call render once to make sure we draw circles even if simulation stops
 
 
       // Handle drag events and add a nice text label
-      var label = layer.append("text").attr("id","label");
+      var label = layer.append("text").attr("id", "label");
 
       function dragstart(event, d) {
         // Begin dragging a circle, make sure the simulation reserves enough alpha to react
@@ -293,14 +289,14 @@
         d.fx = event.x;
         d.fy = event.y;
 
-        label.attr("x",event.x + 5).attr("y",event.y);
+        label.attr("x", event.x + 5).attr("y", event.y);
 
       }
       function dragging(event, d) {
         // Continue dragging
         d.fx = event.x;
         d.fy = event.y;
-        label.attr("x",event.x + 5).attr("y",event.y);
+        label.attr("x", event.x + 5).attr("y", event.y);
 
       }
       function dragend(event, d) {
@@ -342,11 +338,9 @@
         render(); // manually update circles
 
       });
-    }
 
-    requestData();
+      requestData();
 
->>>>>>> 4a8315b7b461676437c68815eeb7a3dd1a214e13
     </script>
 
 
