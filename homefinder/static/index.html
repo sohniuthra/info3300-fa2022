@@ -16,6 +16,7 @@
   <script src="https://d3js.org/topojson.v3.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/validator@13.5.2/validator.min.js"></script>
 
+
   <style>
     .outline {
       stroke: gainsboro;
@@ -123,20 +124,7 @@
     <!--- Code for today's class --->
     <script id="notes1">
 
-      // Data originally in GeoJSON form on the WPRDC (https://data.wprdc.org/dataset/neighborhoods1)
-      //  Converted to topoJSON, which reduced file size from 1.3mB to 250kB.
-      const pgh = await d3.json("/map");
-      var map = d3.select("#map_canvas");
-      var mapWidth = map.attr("width");
-      var mapHeight = map.attr("height");
-
-      // Draw a mesh so we have a background for our house locations
-      var pghMesh = topojson.mesh(pgh, pgh.objects.Neighborhoods_);
-      var projection = d3.geoMercator().fitSize([mapWidth, mapHeight], pghMesh);
-      var path = d3.geoPath().projection(projection);
-
       const requestData = async () => {
-
 
         // Data originally in GeoJSON form on the WPRDC (https://data.wprdc.org/dataset/neighborhoods1)
         //  Converted to topoJSON, which reduced file size from 1.3mB to 250kB.
@@ -152,7 +140,56 @@
 
         map.append("path").datum(pghMesh).attr("class", "outline").attr("d", path);
 
-        console.log(pgh);
+
+
+        // Filter interface
+        // Let's make some dynamic querying tools
+        // We want to give more rapid response to users and enable more direct manipulation of interface elements
+        // To do so, we'll use d3.brush to make our own sliders
+        // We'll go further, showing the data distribution to the user underneath the slider
+        // This is going to require that we keep the whole dataset in RAM -- querying the server every time the user interacts is going to be cumbersome and intractible once latency gets involved
+        // (whenever you design systems like this, you'll face this kind of trade-off)
+
+        // First, a list of filters the user has applied
+        // The dict is going to map attribName => filter_function
+        //  - We use a dict so that we can change filters as the user adjusts them
+        //  - The filter_function is a clever way to set up the filters in real time...
+        //    the interactive elements will create a function that is True when a point
+        //    'passes' the filters
+
+        // What we need:
+        //    passesFilterFunctions(d) ==> T if it passes all the filters, F if it doesn't pass
+        //                      evaluate each of the subfilters and if it passes all of them, then return T
+        //     set of sub-functions for each of the different sliders which give T or F based on user criteria
+
+        var filters = {};
+
+        // EXAMPLE FILTER FUNCTION
+        // filters['price'] = function(d) {  return d.price < 400000 && d.price > 300000;  }
+
+        // And a function for checking whether a point "passes through" the filters
+        // For a given point, we'll loop through each of the filter functions and apply them
+        // Each time we apply a filter, we use && to make sure a point passes ALL of the filters
+        function pointPassesFilters(point) {
+
+          // Start out with true so we can use && to 
+          let stillPassed = true;
+
+          // Loop through the filters and check if it passes each
+          // Objects.values(filters) in this case is the list of filter functions
+
+          Object.values(filters).forEach(filterFunc => {
+
+            stillPassed = filterFunc(point) && stillPassed;
+            // Might want to short-circuit the loop if it fails and you have lots of filters
+
+          });
+
+          return stillPassed;
+
+        }
+
+
 
 
         // Load in house data from our backend server -- apply no filter criteria so we get everything
@@ -162,6 +199,7 @@
         // We wrap our circle-drawing code in a function because we know we're going to be updating circles as the user interacts with the interface
         // This makes life easier and reduces redundant copies of code which lead to bugs
         function updateHouses(data) {
+          data = data.filter(d => pointPassesFilters(d)); // apply the filters, leaving only the T points
 
           console.log("updateHouses", data);
 
@@ -222,94 +260,132 @@
         updateStarred(starred);
 
 
-        // Let's add some static query tools to let the user filter their data
-        // These will take the form of text input fields and a button to apply the filter
-        let controls = d3.select("#controls");
-
-        // Sale price
-        let price = controls.append("div") // Container
-        price.append("p").text("Min Price:") // Label
-          .append("input")              // Input element
-          .attr("type", "text")
-          .attr("class", "price")
-          .attr("param", "priceMn");
-        // We use the "param" attribute to store where this value would go in the URL
-        price.append("p").text("Max Price:")
-          .append("input")
-          .attr("type", "text")
-          .attr("class", "price")
-          .attr("param", "priceMx");
-
-        // Bedrooms
-        let bed = controls.append("div")
-        bed.append("p").text("Min Beds:")
-          .append("input")
-          .attr("type", "text")
-          .attr("class", "bed")
-          .attr("param", "bedMn");
-        bed.append("p").text("Max Beds:")
-          .append("input")
-          .attr("type", "text")
-          .attr("class", "bed")
-          .attr("param", "bedMx");
-
-        // Bathrooms
-        let bath = controls.append("div")
-        bath.append("p").text("Min Baths:")
-          .append("input")
-          .attr("type", "text")
-          .attr("class", "bath")
-          .attr("param", "bathMn");
-        bath.append("p").text("Max Baths:")
-          .append("input")
-          .attr("type", "text")
-          .attr("class", "bath")
-          .attr("param", "bathMx");
-
-        // Placeholder for error message    
-        let error = controls.append("div")
-          .attr("id", "errormsg")
 
 
-        // Button to submit
-        // You could imagine doing this all on the client's side (and it would be more efficient)
-        // Here we send the request to the server so that we can see what's happening
-        // In cases where the server has vastly more data than can be transmitted, this pattern is more useful
-        let button = controls.append("div")
-          .append("button")
-          .text("Update")
-          .on("click", function () {
-            // To make a url based on our query, we'll use the builtin URL object
-            // This makes configuring URL parameters fairly easy
-            let target = new URL("/houses", document.location);
+        // Make the interactive sliders
 
-            // Loop through each text input element...
-            controls.selectAll("input").each(function () {
+        // A function to make a slider element and wire it up
+        function makeSlider(container, label, attribute, sliderWidth, sliderHeight) {
 
-              // Find out what its param is, and what the user has typed
-              let key = d3.select(this).attr("param");
-              let txt = d3.select(this).property("value");
+          // Get a raw array of values for this property
+          let values = houses.map(d => d[attribute]);
 
-              if (txt.length > 0) {
-                // If they've typed something, then send it over to the server as a param
-                target.searchParams.append(key, txt)
-              }
-            });
+          // Find min and max for some scales
+          let minMax = d3.extent(values);
+          let xScale = d3.scaleLinear().domain(minMax)
+            .range([10, sliderWidth - 10]); // padding here for ease
+          let xAxis = d3.axisBottom(xScale).tickFormat(d3.format(".2s"));
 
-            // Finally, download a new dataset and update the view
-            d3.json(target).then(data => {
-              houses = data;           // This is why I often put the data in a var -- so it can be
-              //  referred to and overwritten from any context globally
-              updateHouses(data);
-              updateStarred(starred);
-            });
+
+          // Create some HTML elements
+          let wrapper = container.append("div").attr("class", "control");
+          wrapper.append("div").text(label);
+          let canvas = wrapper.append("svg").attr("width", sliderWidth)
+            .attr("height", sliderHeight + 20)
+            .attr("attribute", attribute);
+          let areaLayer = canvas.append("g");
+          canvas.append("g").attr("transform", `translate(0,${sliderHeight})`)
+            .call(xAxis);
+
+          // Built-in d3 helper function to count up data
+          let numBins = 10;
+          // Program a histogram generator to count up data into "bins"
+          let histoGen = d3.histogram().domain(minMax)
+            .thresholds(numBins);
+          let counts = histoGen(values);
+          console.log(counts);
+
+          // To make the line chart smoother, we add a dummy value at the start of the array using unshift
+          counts.unshift({
+            x0: 0,
+            x1: counts[0].x0,
+            length: counts[0].length
           });
 
-        console.log(pgh);
+          let yScale = d3.scaleLinear().domain(d3.extent(counts, d => d.length))
+            .range([sliderHeight, 4]);
+
+          let area = d3.area().x(d => xScale(d.x1))
+            .y0(yScale(0))
+            .y1(d => yScale(d.length))
+            .curve(d3.curveNatural);
+          // Adding the path works just like a line (the area generator just makes a filled region)
+          areaLayer.append("path").datum(counts)
+            .attr("class", "area")
+            .attr("d", area);
+
+
+
+          // Create the filter_function for this particular slider
+          // BY DEFAULT, it just always returns true because any point passes through the filter
+          let filterFunc = d => true;
+          // Add it to the dict so we can overwrite it later
+          filters[attribute] = filterFunc;
+
+
+          // Allow the user to select regions of the slider
+          var brush = d3.brushX().extent([[10, 0],                           // Upper left corner
+          [sliderWidth - 10, sliderHeight]])  // Lower right corner
+            .on("brush end", brushMoved);
+          // NOTE: we still need to *call the brush* towards the end of our code to "paste" it into HTML
+
+          function brushMoved(event) {
+
+            //console.log(d3.event.type, d3.event.selection);
+
+            // Everything but clicking on brush area
+            if (event.selection !== null) {
+
+              // Run scales in reverse to get data values for the ends of the brush
+              let start = xScale.invert(event.selection[0]);
+              let end = xScale.invert(event.selection[1]);
+
+              // Overwrite old filter in our dictionary
+              // This filter now only returns True if the point's value is between start and end
+              let filterFunc = d => d[attribute] >= start && d[attribute] <= end;
+              filters[attribute] = filterFunc;
+
+              updateHouses(houses);
+              updateStarred(starred);
+            }
+            // Clicking on brush area to empty it out
+            else {
+              // Selected nothing, let everything pass
+              let filterFunc = d => true;
+              filters[attribute] = filterFunc;
+
+              updateHouses(houses);
+              updateStarred(starred);
+            }
+
+
+          }
+
+          // Call the brush to add it to the slider - do this at the end so that it covers the area chart
+          canvas.append("g").attr("class", "brush").call(brush);
+
+        }
+
+        // Make the sliders
+        let controls = d3.select("#controls");
+
+        makeSlider(controls, "Sale Price: ", "Sale Price", 280, 30);
+        makeSlider(controls, "Bedrooms: ", "Bedrooms", 280, 30);
+        makeSlider(controls, "Bathrooms: ", "Bathrooms", 280, 30);
+        makeSlider(controls, "Lot Size: ", "Lot Size", 280, 30);     // serv.py sends this too
+
+
+
+
+
+
+
+
 
       };
 
       requestData();
+
 
 
 
