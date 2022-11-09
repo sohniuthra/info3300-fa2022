@@ -48,11 +48,9 @@ with open('pgh_homes.json') as f:
 # outputKeys specifies the specific keys of data we're going to send to the client
 # The intuition here is that we don't want to waste bandwidth sending fields the client may not need at the start, like Description
 # Houses will enable filtering through URL query parameters (https://skorks.com/2010/05/what-every-developer-should-know-about-urls/)
-
 outputKeys = ['HouseID','Neighborhood','Latitude','Longitude','Sale Price','Bathrooms','Bedrooms','Lot Size']
 @app.route('/houses')
-def houses():
-    
+def houses():    
     # Fetch filter criteria from URL params  (None if not present or not float)
     priceMin = request.args.get('priceMn', None, type=float)
     priceMax = request.args.get('priceMx', None, type=float)
@@ -88,8 +86,7 @@ def houses():
         
     return jsonify( filtered )
 
-
-
+# http://127.0.0.1:9000/details?id=34
 
 # Provide the entire row of data for a house when the client specifies a HouseID
 # Return an error if the HouseID is invalid
@@ -127,6 +124,8 @@ def starred():
     return jsonify( list(starredItems) )
 
 # Star a new HouseID and return a JSON list of starred HouseIDs
+#   ?id=houseID
+#   return a list of updated starred places (in JSON)
 @app.route('/star')
 def star():
     ident = request.args.get("id", None, type=int)
