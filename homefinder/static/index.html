@@ -343,6 +343,7 @@
               // Overwrite old filter in our dictionary
               // This filter now only returns True if the point's value is between start and end
               let filterFunc = d => d[attribute] >= start && d[attribute] <= end;
+              console.log(filterFunc);
               filters[attribute] = filterFunc;
 
               updateHouses(houses);
