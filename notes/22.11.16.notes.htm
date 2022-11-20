@@ -1,0 +1,162 @@
+<html><head>
+<title>INFO 3300 - November 16</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
+  
+  <link rel="stylesheet" type="text/css" href="../css/normalize.css">
+  <link rel="stylesheet" type="text/css" href="../css/skeleton.css">
+  <link rel="stylesheet" type="text/css" href="../css/custom-style.css">
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/styles/default.min.css">
+  <link rel="stylesheet" href="../css/hljs-base16.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.2.0/highlight.min.js"></script>
+  
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  
+  <style>
+    
+  
+  </style>
+
+</head>
+<body>
+  <div class="container larger">
+    <h3>Notes for November 16</h3>
+    <p>Today we'll continue our look at raster graphics. This time, we'll make an interactive image that lets users explore the use of color in a painting.</p>
+    <p>I have selected an interesting work, <a href="https://www.clevelandart.org/art/1921.1239">Portrait of Dora Wheeler by William Merritt Chase</a> which comes from the Cleveland Museum of Art's Open Access collection. Visit the link to read more about the painting!</p>
+    <p>While in the past we've used 1-d brushes for Homefinder, this time we will use a d3 brush. Refer back to the <a href="https://github.com/d3/d3-brush">documentation</a> as necessary.</p>
+    <h5>HTML for today:</h5>
+
+
+    <div id="container" >
+      <svg width="600" height="574">
+         <foreignObject width="600" height="574" y="0" x="0">
+           <!--- Foreign object allows us to nest HTML inside an SVG --->
+           <!--- It can get pretty hacky, so use at your own risk --->
+           <canvas id="painting" width="600" height="574"></canvas>
+         </foreignObject>
+         <g id="brush"></g>
+      </svg>
+    </div>
+    <div id="sample">
+      <svg width="600" height="80">
+        <rect id="color" x="0" y="10" width="600" height="70" fill="white" />
+        <text id="label" x="20" y="60" />
+      </svg>
+    </div>
+
+
+  <!-- This block will be automatically filled with syntax-highlighted code from the script below -->
+  <h5>Code for today:</h5>
+  <pre>
+    <code id="display1" class="hljs javascript">
+    </code>
+  </pre>
+
+
+  <script id="notes1">
+  
+  // Observe in the HTML that we have a <canvas> nested INSIDE OF a <svg> using <foreignObject>
+  // These elements allow you add plain HTML code into an SVG, but they are risky to use.
+  // Here we use it so that we can put a brush <g> tag right on top of the canvas.
+  // The method from 11-14 would also work fine here.
+  
+  // Some helper variables to get the canvas going
+  var canvas = d3.select("#painting");
+  var gfxContext = canvas.node().getContext("2d");
+  var imgWidth = canvas.node().width;
+  var imgHeight = canvas.node().height;
+  
+  // Programmatically define an image to start loading it
+  // This is old JS stuff, so we use .onload to trigger a function once img loads
+  var img = new Image;
+  img.src = "../datasets/CMA.1921.1239.png"
+  img.onload = imgLoaded;
+
+  function imgLoaded() {
+    
+    gfxContext.drawImage(this, 0, 0); // Paint image to canvas
+    
+    // It's easier to extract pixels from canvas than to extract from Image object
+    let pixels = gfxContext.getImageData(0,0,imgWidth,imgHeight).data;
+    
+    // Define a brush and paste it into the <g> tag
+    let brush = d3.brush()
+                  .extent([ [0,0],[imgWidth,imgHeight] ])
+                  .on("brush end", imageBrushed);
+    d3.select("#brush").call(brush);
+
+    // Here is a more complex example of destructuring
+    // Because we know the brush gives imageBrushed() an event object, we can take it
+    //  apart right in the function signature. Here we break the selection key
+    //  into four variables since we know exactly the format it comes to us in
+    function imageBrushed( { selection: [[xStart, yStart], [xEnd, yEnd]] }  ) {
+      
+      // Base case -- nothing selected
+      if (event.selection === null) {
+        d3.select("#color").attr("fill", "white");
+        return;
+      }
+      
+      // Otherwise start gathering the colors to average
+      // We'll keep a running total of L, A, and B (lab colors make nicer average colors)
+      let n = 0, l = 0, a = 0, b = 0;
+      
+      // Iterate through brush region
+      for (let x=Math.floor(xStart); x<xEnd; x++) {
+        for (let y=Math.floor(yStart); y<yEnd; y++) {
+          
+          // Compute the proper location in the image data 1-d array
+          let pixelPos = ((y * imgWidth) + x) * 4;
+          
+          // Get a lab color
+          // First we take out the R, G, and B, then put them into a d3.rgb
+          // d3.lab can do the conversion for us if we give it a d3.rgb object
+          let lab = d3.lab( d3.rgb(pixels[pixelPos],pixels[pixelPos+1],pixels[pixelPos+2]) );
+
+          // Keep running totals using our color
+          l += lab.l;
+          a += lab.a;
+          b += lab.b;
+          n++;
+        }
+      }
+      
+      // Compute the mean
+      let avg = d3.lab(l/n, a/n, b/n);
+
+      // Fill in the rect, set the label
+      d3.select("#color").attr("fill", avg.hex());
+      d3.select("#label").text( d3.rgb(avg).hex() );
+
+      // This is a fun trick. We use black text if the color is light (l > 50) and white text
+      //  if the color is dark so that you can always read the label
+      d3.select("#label").attr("fill", (avg.l > 50) ? "black" : "white" )
+
+    }
+
+  }
+
+  
+  </script>
+  
+  
+
+  <!--- calls the highlight library to fill the <pre> tag with code --->
+  <script>
+  
+  function sanitize(s) {
+    return s.replace("<br>", "\\n")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+          }
+    document.getElementById("display1").innerHTML = sanitize( document.getElementById("notes1").innerText);
+    hljs.highlightAll();
+  </script>
+
+
+  </div>
+</body>
+</html>
